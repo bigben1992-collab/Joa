@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lager Beta - Einkaufslisten-Verwaltung</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 15px; background: #f4f6f8; color: #333; }
+    nav { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    nav a { text-decoration: none; color: #2563eb; font-weight: bold; }
+    
+    .card { background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    #reader { width: 100%; max-width: 350px; margin: 0 auto 15px auto; }
+
+    .filter-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .filter-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    .filter-box label { font-weight: bold; color: #1e40af; cursor: pointer; }
+    .filter-input { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; outline: none; }
+    .filter-input:focus { border-color: #2563eb; }
+
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+    button { 
+      background: #2563eb; color: #fff; border: none; font-weight: bold; border-radius: 4px; 
+      cursor: pointer; padding: 10px 15px; flex: 1; min-width: 140px; box-sizing: border-box; 
+    }
+    button:hover { background: #1d4ed8; }
+    .btn-save { background: #16a34a; }
+    .btn-save:hover { background: #15803d; }
+    .btn-pdf { background: #059669; }
+    .btn-pdf:hover { background: #047857; }
+    .btn-secondary { background: #64748b; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-cancel { background: #dc2626; }
+    .btn-cancel:hover { background: #b91c1c; }
+    
+    /* Toggle Button & Klapp-Container */
+    .toggle-list-btn {
+      background: #0f766e;
+      color: #fff;
+      font-weight: bold;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .toggle-list-btn:hover { background: #115e59; }
+
+    .list-manager-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      display: none; /* Inital zugeklappt */
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .active-filter-badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      border: 1px solid #bfdbfe;
+      display: none;
+      margin-bottom: 10px;
+    }
+
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; color: #1e293b; font-weight: bold; }
+    tr:hover { background: #f1f5f9; }
+    tr.selected-row { background: #f0fdf4; }
+    
+    .badge-zero { color: #dc2626; font-weight: bold; background: #fef2f2; padding: 2px 8px; border-radius: 4px; border: 1px solid #fecaca; }
+    .badge-stock { color: #16a34a; font-weight: bold; background: #f0fdf4; padding: 2px 8px; border-radius: 4px; border: 1px solid #bbf7d0; }
+    .badge-platz { background: #e2e8f0; color: #334155; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-right: 4px; }
+    
+    .qty-input { width: 70px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; }
+
+    #status { margin-top: 10px; padding: 10px; border-radius: 4px; font-weight: bold; background-color: #f1f5f9; color: #475569; }
+    .status-loading { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd; }
+    .status-error { background-color: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fecaca; }
+    .status-success { background-color: #f0fdf4 !important; color: #16a34a !important; border: 1px solid #bbf7d0; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-box { background: #fff; padding: 20px; border-radius: 8px; max-width: 320px; width: 90%; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .modal-box h3 { margin-top: 0; }
+    .confirm-code { font-size: 18px; font-weight: bold; color: #2563eb; margin: 10px 0; word-break: break-all; }
+    .btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-group button { flex: 1; margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html">🏠 Menü</a> |
+    <a href="buchen.html">Buchen (EK/VK)</a> |
+    <a href="artikel.html">Artikelabfrage & Etikettendruck</a> |
+    <a href="platz.html">Platzabfrage</a> |
+    <a href="bilanz.html">Bilanz</a> |
+    <a href="verwaltung.html">Verwaltung</a>
+  </nav>
+
+  <div class="card">
+    <h2 id="pageTitle">Bestandsabfrage & Einkaufslisten</h2>
+
+    <!-- Scanner / Kamera ganz oben -->
+    <div id="reader"></div>
+
+    <!-- Hauptfilter & Steuerung -->
+    <div class="filter-box">
+      <div class="filter-row">
+        <span><strong>Auswahlbasis:</strong></span>
+        <!-- Reihenfolge getauscht & "all" als checked gesetzt -->
+        <label><input type="radio" name="viewMode" value="all" checked onchange="switchViewMode()"> 📦 Alle Artikel</label>
+        <label><input type="radio" name="viewMode" value="zero" onchange="switchViewMode()"> ⚠️ Nur Bestand 0</label>
+      </div>
+      
+      <div class="filter-row">
+        <div>
+          <label for="searchBarcode">🔍 Barcode / Name:</label>
+          <input type="text" id="searchBarcode" class="filter-input" placeholder="Suche..." oninput="applyFilters()">
+        </div>
+        <div>
+          <label for="searchLocation">📍 Lagerort:</label>
+          <select id="searchLocation" class="filter-input" onchange="applyFilters()">
+            <option value="">-- Alle Lagerorte --</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-secondary" onclick="loadArticles()">🔄 Aktualisieren</button>
+      <button class="btn-secondary" onclick="selectAll(true)">☑️ Alle wählen</button>
+      <button class="btn-secondary" onclick="selectAll(false)">☐ Alle abwählen</button>
+      <button class="btn-save" onclick="saveCurrentList()">💾 Einkaufsliste speichern</button>
+      <button class="btn-pdf" onclick="generateShoppingListPDF()">📄 PDF Drucken</button>
+    </div>
+
+    <!-- EINKAUFSLISTEN-VERWALTUNG (Ausklappbar über der Ergebnisanzeige) -->
+    <button class="toggle-list-btn" onclick="toggleListManager()">
+      <span>📁 Gespeicherte Einkaufslisten verwalten</span>
+      <span id="toggleIcon">▼</span>
+    </button>
+
+    <div id="listManagerBox" class="list-manager-box">
+      <select id="savedListsDropdown" class="filter-input" style="flex: 1; min-width: 200px;">
+        <option value="">-- Keine Liste ausgewählt --</option>
+      </select>
+      <button class="btn-secondary" style="flex: 0; min-width: 100px;" onclick="loadSelectedList()">📂 Laden</button>
+      <button class="btn-cancel" style="flex: 0; min-width: 100px;" onclick="deleteSelectedList()">🗑️ Löschen</button>
+      <button id="btnClearFilter" class="btn-secondary" style="flex: 0; min-width: 120px; display: none;" onclick="clearActiveListFilter()">❌ Filter aufheben</button>
+    </div>
+
+    <div id="activeFilterBadge" class="active-filter-badge">
+      📌 Aktiver Listen-Filter: <span id="activeListName"></span>
+    </div>
+
+    <!-- Statusmeldung & Ergebnisanzeige (Tabelle) -->
+    <div id="status">Bereit.</div>
+
+    <div class="table-container">
+      <table id="stockTable" style="display: none;">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">Kauf</th>
+            <th>Barcode</th>
+            <th>Warenname</th>
+            <th>Akt. Bestand</th>
+            <th>EK-Preis (€)</th>
+            <th style="width: 100px;">Bestellmenge</th>
+            <th>Lagerplatz</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Eingabe bestätigen</h3>
+      <p>Gescannter Code für Suchfeld:</p>
+      <div id="modalCode" class="confirm-code"></div>
+      <div class="btn-group">
+        <button onclick="acceptScanCode()">✅ Übernehmen</button>
+        <button class="btn-cancel" onclick="rejectScanCode()">❌ Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwB2qgNQ5rJHH3jYc-BNzT_JB2uze4zf9ACCydLrNdRLQ9ShlDheS2XkP8J9C5h14RN/exec";
+    let rawArticlesData = [];
+    let shoppingCart = new Map(); // Barcode -> Menge
+    let activeListName = null;
+    let pendingScanText = "";
+    let isPaused = false;
+
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+    scanner.render((text) => {
+      if (isPaused) return;
+      try { scanner.pause(true); } catch(e){}
+      isPaused = true;
+      pendingScanText = text;
+      document.getElementById('modalCode').innerText = text;
+      document.getElementById('confirmModal').style.display = "flex";
+    });
+
+    function acceptScanCode() {
+      document.getElementById('confirmModal').style.display = "none";
+      document.getElementById('searchBarcode').value = pendingScanText;
+      applyFilters();
+      resumeScanner();
+    }
+
+    function rejectScanCode() {
+      document.getElementById('confirmModal').style.display = "none";
+      pendingScanText = "";
+      resumeScanner();
+    }
+
+    function resumeScanner() {
+      isPaused = false;
+      try { scanner.resume(); } catch(e){}
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadArticles();
+      updateSavedListsDropdown();
+    });
+
+    /* Toggle-Funktion für die Listenverwaltung */
+    function toggleListManager() {
+      const box = document.getElementById("listManagerBox");
+      const icon = document.getElementById("toggleIcon");
+      if (box.style.display === "none" || box.style.display === "") {
+        box.style.display = "flex";
+        icon.innerText = "▲";
+      } else {
+        box.style.display = "none";
+        icon.innerText = "▼";
+      }
+    }
+
+    function switchViewMode() {
+      loadArticles();
+    }
+
+    async function loadArticles() {
+      const statusDiv = document.getElementById("status");
+      const table = document.getElementById("stockTable");
+      const tbody = document.getElementById("tableBody");
+      const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+
+      statusDiv.style.display = "block";
+      statusDiv.className = "status-loading";
+      statusDiv.innerText = "⏳ Lade Artikeldaten vom Server...";
+      table.style.display = "none";
+      tbody.innerHTML = "";
+
+      try {
+        const actionParam = viewMode === "all" ? "getAllArticles" : "getZeroStock";
+        let response = await fetch(`${API_URL}?action=${actionParam}`);
+        let res = await response.json();
+        
+        if (res.status === "success") {
+          rawArticlesData = res.data || [];
+          populateLocationDropdown(rawArticlesData);
+          applyFilters();
+        } else {
+          showError(new Error(res.message || "Fehler beim Laden"));
+        }
+      } catch (err) {
+        showError(err);
+      }
+    }
+
+    function populateLocationDropdown(articles) {
+      const locationSelect = document.getElementById("searchLocation");
+      const currentSelected = locationSelect.value;
+      const locations = new Set();
+      
+      articles.forEach(item => {
+        if (item.platz) locations.add(String(item.platz).trim());
+        if (item.plaetze) item.plaetze.forEach(p => locations.add(String(p).trim()));
+      });
+
+      locationSelect.innerHTML = '<option value="">-- Alle Lagerorte --</option>';
+      Array.from(locations).sort().forEach(loc => {
+        if (loc) {
+          const opt = document.createElement("option");
+          opt.value = loc;
+          opt.textContent = loc;
+          locationSelect.appendChild(opt);
+        }
+      });
+      locationSelect.value = currentSelected;
+    }
+
+    function applyFilters() {
+      const statusDiv = document.getElementById("status");
+      const table = document.getElementById("stockTable");
+      const tbody = document.getElementById("tableBody");
+      const viewMode = document.querySelector('input[name="viewMode"]:checked').value;
+      
+      const searchBarcode = document.getElementById("searchBarcode").value.trim().toLowerCase();
+      const selectedLocation = document.getElementById("searchLocation").value.trim().toLowerCase();
+
+      tbody.innerHTML = "";
+
+      if (!rawArticlesData || rawArticlesData.length === 0) {
+        statusDiv.style.display = "block";
+        statusDiv.className = "status-success";
+        statusDiv.innerText = "Keine Artikel vorhanden.";
+        table.style.display = "none";
+        return;
+      }
+
+      let displayList = rawArticlesData.map(item => ({
+        barcode: item.barcode,
+        name: item.name,
+        ek: Number(item.ek || 0),
+        bestand: Number(item.bestand || 0),
+        plaetze: Array.isArray(item.plaetze) ? item.plaetze : (item.platz ? [item.platz] : [])
+      }));
+
+      if (activeListName) {
+        displayList = displayList.filter(a => shoppingCart.has(a.barcode));
+      } else if (viewMode === "zero") {
+        displayList = displayList.filter(a => a.bestand <= 0);
+      }
+
+      if (searchBarcode) {
+        displayList = displayList.filter(a => 
+          String(a.barcode).toLowerCase().includes(searchBarcode) || 
+          String(a.name).toLowerCase().includes(searchBarcode)
+        );
+      }
+
+      if (selectedLocation) {
+        displayList = displayList.filter(a => 
+          a.plaetze.some(p => String(p).toLowerCase() === selectedLocation)
+        );
+      }
+
+      if (displayList.length === 0) {
+        statusDiv.className = "status-success";
+        statusDiv.style.display = "block";
+        statusDiv.innerText = "🔍 Keine passenden Artikel gefunden.";
+        table.style.display = "none";
+        return;
+      }
+
+      statusDiv.style.display = "none";
+
+      displayList.forEach(item => {
+        const row = document.createElement("tr");
+        const isChecked = shoppingCart.has(item.barcode);
+        if (isChecked) row.classList.add("selected-row");
+
+        const qty = shoppingCart.has(item.barcode) ? shoppingCart.get(item.barcode) : 1;
+
+        let plaetzeHtml = item.plaetze.length > 0 
+          ? item.plaetze.map(p => `<span class="badge-platz">📍 ${escapeHtml(p)}</span>`).join(" ") 
+          : "-";
+
+        const stockBadge = item.bestand <= 0 
+          ? `<span class="badge-zero">0</span>` 
+          : `<span class="badge-stock">${item.bestand} Stk.</span>`;
+
+        row.innerHTML = `
+          <td style="text-align: center;">
+            <input type="checkbox" id="chk_${item.barcode}" ${isChecked ? "checked" : ""} 
+              onchange="toggleItem('${item.barcode}', this.checked)">
+          </td>
+          <td>${escapeHtml(item.barcode)}</td>
+          <td><strong>${escapeHtml(item.name)}</strong></td>
+          <td>${stockBadge}</td>
+          <td>${item.ek.toFixed(2)} €</td>
+          <td>
+            <input type="number" min="1" class="qty-input" id="qty_${item.barcode}" value="${qty}" 
+              onchange="updateQuantity('${item.barcode}', this.value)">
+          </td>
+          <td>${plaetzeHtml}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      table.style.display = "table";
+    }
+
+    function toggleItem(barcode, isChecked) {
+      const qtyInput = document.getElementById(`qty_${barcode}`);
+      const qty = Math.max(1, Number(qtyInput ? qtyInput.value : 1));
+
+      if (isChecked) {
+        shoppingCart.set(barcode, qty);
+      } else {
+        shoppingCart.delete(barcode);
+      }
+      
+      const chkElem = document.getElementById(`chk_${barcode}`);
+      if (chkElem) {
+        const row = chkElem.closest("tr");
+        if (isChecked) row.classList.add("selected-row");
+        else row.classList.remove("selected-row");
+      }
+      syncToBuchenStorage();
+    }
+
+    function updateQuantity(barcode, value) {
+      const qty = Math.max(1, Number(value) || 1);
+      if (shoppingCart.has(barcode)) {
+        shoppingCart.set(barcode, qty);
+        syncToBuchenStorage();
+      }
+    }
+
+    function selectAll(checkState) {
+      const checkboxes = document.querySelectorAll('#tableBody input[type="checkbox"]');
+      checkboxes.forEach(chk => {
+        chk.checked = checkState;
+        const barcode = chk.id.replace('chk_', '');
+        const qtyInput = document.getElementById(`qty_${barcode}`);
+        const qty = Math.max(1, Number(qtyInput ? qtyInput.value : 1));
+        
+        if (checkState) {
+          shoppingCart.set(barcode, qty);
+        } else {
+          shoppingCart.delete(barcode);
+        }
+        
+        const row = chk.closest("tr");
+        if (checkState) row.classList.add("selected-row");
+        else row.classList.remove("selected-row");
+      });
+      syncToBuchenStorage();
+    }
+
+    /* --- SYNCHRONISATION MIT BUCHEN.HTML --- */
+    function syncToBuchenStorage() {
+      const buchenArray = [];
+      shoppingCart.forEach((qty, barcode) => {
+        const item = rawArticlesData.find(a => String(a.barcode) === String(barcode));
+        buchenArray.push({
+          barcode: barcode,
+          name: item ? item.name : "Unbekannt",
+          menge: qty
+        });
+      });
+      localStorage.setItem("lagerEinkaufsliste", JSON.stringify(buchenArray));
+    }
+
+    /* --- LOCALSTORAGE SPEICHERUNG --- */
+
+    function saveCurrentList() {
+      if (shoppingCart.size === 0) {
+        alert("Wählen Sie mindestens einen Artikel aus, bevor Sie eine Liste speichern.");
+        return;
+      }
+
+      const defaultName = activeListName || ("Einkaufsliste " + new Date().toLocaleDateString('de-DE'));
+      const listName = prompt("Geben Sie einen Namen für diese Einkaufsliste ein:", defaultName);
+      if (!listName || !listName.trim()) return;
+
+      const lists = JSON.parse(localStorage.getItem("lager_einkaufslisten") || "{}");
+      
+      const itemsObj = {};
+      shoppingCart.forEach((qty, barcode) => {
+        itemsObj[barcode] = qty;
+      });
+
+      lists[listName.trim()] = itemsObj;
+      localStorage.setItem("lager_einkaufslisten", JSON.stringify(lists));
+
+      syncToBuchenStorage();
+
+      alert(`✅ Einkaufsliste "${listName}" wurde erfolgreich gespeichert!`);
+      updateSavedListsDropdown(listName.trim());
+    }
+
+    function updateSavedListsDropdown(selectKey = "") {
+      const dropdown = document.getElementById("savedListsDropdown");
+      const lists = JSON.parse(localStorage.getItem("lager_einkaufslisten") || "{}");
+
+      dropdown.innerHTML = '<option value="">-- Keine Liste ausgewählt --</option>';
+
+      Object.keys(lists).forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        if (name === selectKey) opt.selected = true;
+        dropdown.appendChild(opt);
+      });
+    }
+
+    function loadSelectedList() {
+      const name = document.getElementById("savedListsDropdown").value;
+      if (!name) {
+        alert("Bitte wählen Sie eine Liste aus dem Menü aus.");
+        return;
+      }
+
+      const lists = JSON.parse(localStorage.getItem("lager_einkaufslisten") || "{}");
+      const savedItems = lists[name];
+
+      if (!savedItems) {
+        alert("Liste konnte nicht gefunden werden.");
+        return;
+      }
+
+      shoppingCart.clear();
+      Object.keys(savedItems).forEach(barcode => {
+        shoppingCart.set(barcode, savedItems[barcode]);
+      });
+
+      activeListName = name;
+      document.getElementById("activeListName").innerText = name;
+      document.getElementById("activeFilterBadge").style.display = "block";
+      document.getElementById("btnClearFilter").style.display = "inline-block";
+
+      syncToBuchenStorage();
+      applyFilters();
+    }
+
+    function clearActiveListFilter() {
+      activeListName = null;
+      document.getElementById("activeFilterBadge").style.display = "none";
+      document.getElementById("btnClearFilter").style.display = "none";
+      document.getElementById("savedListsDropdown").value = "";
+      shoppingCart.clear();
+      syncToBuchenStorage();
+      applyFilters();
+    }
+
+    function deleteSelectedList() {
+      const name = document.getElementById("savedListsDropdown").value;
+      if (!name) return;
+
+      if (confirm(`Möchten Sie die gespeicherte Liste "${name}" wirklich löschen?`)) {
+        const lists = JSON.parse(localStorage.getItem("lager_einkaufslisten") || "{}");
+        delete lists[name];
+        localStorage.setItem("lager_einkaufslisten", JSON.stringify(lists));
+        
+        if (activeListName === name) {
+          clearActiveListFilter();
+        }
+
+        updateSavedListsDropdown();
+        alert(`🗑️ Liste "${name}" wurde gelöscht.`);
+      }
+    }
+
+    /* --- PDF LOGIK --- */
+
+    function generateShoppingListPDF() {
+      if (shoppingCart.size === 0) {
+        alert("Bitte wählen Sie mindestens einen Artikel aus!");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      const title = activeListName ? `EINKAUFSLISTE: ${activeListName.toUpperCase()}` : "EINKAUFSLISTE / NACHBESTELLUNG";
+      doc.text(title, 14, 20);
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Erstellt am: ${new Date().toLocaleDateString('de-DE')} - ${new Date().toLocaleTimeString('de-DE')}`, 14, 28);
+
+      const tableData = [];
+      let totalEstimatedCost = 0;
+
+      shoppingCart.forEach((qty, barcode) => {
+        const item = rawArticlesData.find(a => String(a.barcode) === String(barcode));
+        if (item) {
+          const ek = Number(item.ek || 0);
+          const totalEk = ek * qty;
+          totalEstimatedCost += totalEk;
+
+          tableData.push([
+            item.barcode,
+            item.name,
+            `${qty} Stk.`,
+            `${ek.toFixed(2)} €`,
+            `${totalEk.toFixed(2)} €`,
+            Array.isArray(item.plaetze) ? item.plaetze.join(", ") : (item.platz || "-")
+          ]);
+        }
+      });
+
+      doc.autoTable({
+        startY: 35,
+        head: [['Barcode', 'Artikelbeschreibung', 'Bestellmenge', 'EK-Preis', 'Gesamt-EK', 'Lagerort']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      let finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Geschätzte Gesamtkosten (EK): ${totalEstimatedCost.toFixed(2)} EUR`, 14, finalY);
+
+      const filename = activeListName 
+        ? `Einkaufsliste_${activeListName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+        : `Einkaufsliste_${new Date().toISOString().slice(0,10)}.pdf`;
+
+      doc.save(filename);
+    }
+
+    function showError(err) {
+      const statusDiv = document.getElementById("status");
+      statusDiv.style.display = "block";
+      statusDiv.className = "status-error";
+      statusDiv.innerText = "❌ Fehler beim Abrufen der Daten: " + (err.message || err);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return "";
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
