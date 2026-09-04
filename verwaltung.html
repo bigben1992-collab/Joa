@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lager Beta - Verwaltung</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f4f6f8; }
+    nav { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap; }
+    nav a { text-decoration: none; color: #2563eb; font-weight: bold; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 15px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .menu-card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #1e293b;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .menu-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .menu-icon { font-size: 32px; margin-bottom: 10px; }
+    .menu-title { font-weight: bold; font-size: 18px; color: #2563eb; }
+    .menu-desc { font-size: 13px; color: #64748b; text-align: center; margin-top: 5px; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html">🏠 Hauptmenü</a> |
+    <a href="buchen.html">Buchen</a> |
+    <a href="artikel.html">Artikelabfrage & Etikettendruck</a> |
+    <a href="platz.html">Platzabfrage</a> |
+    <a href="bestandsabfrage.html">Bestandsabfrage</a> |
+    <a href="bilanz.html">Bilanz</a> |
+  </nav>
+
+  <div class="header">
+    <h1>Verwaltung & Inventur</h1>
+    <p>Bitte wählen Sie einen Verwaltungsbereich aus:</p>
+  </div>
+
+  <div class="grid-container">
+    <a href="preise.html" class="menu-card">
+      <div class="menu-icon">💶</div>
+      <div class="menu-title">Preise anpassen</div>
+      <div class="menu-desc">EK- und VK-Preise von Artikeln bearbeiten</div>
+    </a>
+
+    <a href="umlagern.html" class="menu-card">
+      <div class="menu-icon">🔄</div>
+      <div class="menu-title">Umlagerung</div>
+      <div class="menu-desc">Bestände zwischen Lagerplätzen verschieben</div>
+    </a>
+
+    <a href="inventur.html" class="menu-card">
+      <div class="menu-icon">📋</div>
+      <div class="menu-title">Inventur / Korrektur</div>
+      <div class="menu-desc">Ist-Bestände manuell überschreiben</div>
+    </a>
+  </div>
+
+</body>
+</html>
