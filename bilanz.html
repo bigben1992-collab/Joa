@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lager Beta - Bilanz & Auswertung</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; margin: 15px; background: #f4f6f8; }
+    nav { background: #fff; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+    nav a { text-decoration: none; color: #2563eb; font-weight: bold; }
+    nav a.active { color: #1e40af; border-bottom: 2px solid #2563eb; }
+    .card { background: #fff; padding: 15px; border-radius: 6px; }
+    
+    #reader { width: 100%; max-width: 350px; margin: 0 auto 15px auto; }
+
+    label { font-size: 13px; font-weight: bold; color: #1e40af; display: block; margin-top: 5px; }
+    input { width: 100%; padding: 10px; margin: 5px 0 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+    
+    .filter-box { display: flex; flex-wrap: wrap; gap: 10px; }
+    .filter-group { flex: 1; min-width: 140px; }
+    
+    button { width: 100%; padding: 10px; margin: 5px 0; background: #2563eb; color: #fff; border: none; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    
+    .results { margin-top: 20px; border-top: 2px solid #f4f6f8; padding-top: 10px; }
+    .metric { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+    .metric-title { font-weight: bold; color: #334155; }
+    .highlight { font-size: 1.1em; color: #16a34a; font-weight: bold; }
+    .negative { font-size: 1.1em; color: #dc2626; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="index.html">🏠 Menü</a> |
+    <a href="buchen.html">Buchen (EK/VK)</a> |
+    <a href="artikel.html">Artikelabfrage & Etikettendruck</a> |
+    <a href="platz.html">Platzabfrage</a> |
+    <a href="bestandsabfrage.html">Bestandsabfrage</a> |
+    <a href="verwaltung.html">Verwaltung</a>
+  </nav>
+
+  <div class="card">
+    <h2>Finanzbilanz</h2>
+
+    <div id="reader"></div>
+
+    <div class="filter-box">
+      <div class="filter-group">
+        <label for="vonDatum">Von Datum:</label>
+        <input type="date" id="vonDatum">
+      </div>
+      <div class="filter-group">
+        <label for="bisDatum">Bis Datum:</label>
+        <input type="date" id="bisDatum">
+      </div>
+      <div class="filter-group" style="flex: 100%;">
+        <label for="artikelFilter">Artikel / Barcode (optional):</label>
+        <input type="text" id="artikelFilter" placeholder="z. B. Barcode oder Artikelname">
+      </div>
+    </div>
+
+    <button id="btnBerechnen" onclick="ladeBilanz()">Bilanz berechnen</button>
+
+    <div class="results">
+      <div class="metric">
+        <span class="metric-title">Wareneinkauf (EK):</span>
+        <span id="wareneinsatz">0.00 €</span>
+      </div>
+      <div class="metric">
+        <span class="metric-title">Umsatz (VK):</span>
+        <span id="umsatz">0.00 €</span>
+      </div>
+      <div class="metric">
+        <span class="metric-title">Rohgewinn:</span>
+        <span id="rohgewinn" class="highlight">0.00 €</span>
+      </div>
+      <div class="metric">
+        <span class="metric-title" id="lbl-lagerwert">Aktueller Lagerwert (EK):</span>
+        <span id="lagerwert">0.00 €</span>
+      </div>
+      <div class="metric">
+        <span class="metric-title" id="lbl-lagerwertVK">Aktueller Lagerwert (VK):</span>
+        <span id="lagerwertVK">0.00 €</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwB2qgNQ5rJHH3jYc-BNzT_JB2uze4zf9ACCydLrNdRLQ9ShlDheS2XkP8J9C5h14RN/exec";
+
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 200 });
+    
+    scanner.render((text) => {
+      let isCorrect = confirm(`Gescannter Code: ${text}\nAls Filter für die Bilanz übernehmen?`);
+      if (isCorrect) {
+        document.getElementById('artikelFilter').value = text;
+        ladeBilanz();
+      }
+    });
+
+    async function ladeBilanz() {
+      const von = document.getElementById("vonDatum").value;
+      const bis = document.getElementById("bisDatum").value;
+      const artikel = document.getElementById("artikelFilter").value;
+      const btn = document.getElementById("btnBerechnen");
+
+      // Validierung der Datumseingaben
+      if (von && bis && von > bis) {
+        alert("Das 'Von'-Datum darf nicht nach dem 'Bis'-Datum liegen.");
+        return;
+      }
+
+      // Visuelles Feedback aktivieren
+      const originalBtnText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = "Berechne...";
+
+      const url = `${WEB_APP_URL}?action=getFinance&von=${encodeURIComponent(von)}&bis=${encodeURIComponent(bis)}&artikel=${encodeURIComponent(artikel)}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status === "success" && data.data) {
+          document.getElementById("wareneinsatz").innerText = `${data.data.wareneinsatzEK ?? "0.00"} €`;
+          document.getElementById("umsatz").innerText = `${data.data.umsatzVK ?? "0.00"} €`;
+
+          const rohgewinnEl = document.getElementById("rohgewinn");
+          const rohGewinnRaw = (data.data.rohgewinn ?? "0").toString().replace(',', '.');
+          const rohgewinnWert = parseFloat(rohGewinnRaw) || 0;
+
+          rohgewinnEl.innerText = `${data.data.rohgewinn ?? "0.00"} €`;
+          rohgewinnEl.className = rohgewinnWert < 0 ? "negative" : "highlight";
+
+          // Dynamische Label-Anpassung
+          const isHist = Boolean(data.data.isHistorisch);
+          document.getElementById("lbl-lagerwert").innerText = isHist ? "Lagerwert EK (zum Stichtag):" : "Aktueller Lagerwert (EK):";
+          document.getElementById("lbl-lagerwertVK").innerText = isHist ? "Lagerwert VK (zum Stichtag):" : "Aktueller Lagerwert (VK):";
+
+          document.getElementById("lagerwert").innerText = `${data.data.lagerwert ?? "0.00"} €`;
+          document.getElementById("lagerwertVK").innerText = `${data.data.lagerwertVK ?? "0.00"} €`;
+        } else {
+          alert("Fehler beim Abrufen der Bilanz: " + (data.message || "Unbekannter Fehler"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Netzwerkfehler beim Abrufen der Daten.");
+      } finally {
+        // Button-Status zurücksetzen
+        btn.disabled = false;
+        btn.innerText = originalBtnText;
+      }
+    }
+
+    window.onload = ladeBilanz;
+  </script>
+
+</body>
+</html>
