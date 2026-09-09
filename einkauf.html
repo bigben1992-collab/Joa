@@ -131,6 +131,7 @@
     .nav-item:hover { background: #f1f5f9; transform: translateX(2px); }
 
     .nav-home { --card-accent: #3b82f6; }
+    .nav-verkauf { --card-accent: #0284c7; }
     .nav-artikel { --card-accent: #3b82f6; }
     .nav-platz { --card-accent: #f59e0b; }
     .nav-bestand { --card-accent: #8b5cf6; }
@@ -448,6 +449,7 @@
       </summary>
       <nav class="nav-grid">
         <a href="index.html" class="nav-item nav-home"><span>🏠</span> Hauptmenü</a>
+        <a href="verkauf.html" class="nav-item nav-verkauf"><span>📤</span> Ware verkaufen</a>
         <a href="artikel.html" class="nav-item nav-artikel"><span>🔍</span> Artikelabfrage</a>
         <a href="platz.html" class="nav-item nav-platz"><span>📍</span> Platzabfrage</a>
         <a href="bestandsabfrage.html" class="nav-item nav-bestand"><span>📝</span> Bestandsabfrage</a>
@@ -837,7 +839,6 @@
         if (result.status === "success") {
           status.innerText = "✅ Einkauf gebucht! ID: " + result.data.id;
           
-          // Aus lokaler Einkaufsliste entfernen falls vorhanden
           const selectedKey = document.getElementById("shoppingListSelect").value;
           if (selectedKey === "__temp__") {
             let list = JSON.parse(localStorage.getItem("lagerEinkaufsliste") || "[]");
