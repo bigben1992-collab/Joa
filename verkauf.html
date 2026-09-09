@@ -26,7 +26,7 @@
       --radius-sm: 8px;
       
       --module-color: #0284c7;
-      --module-bg: #ecfdf5;
+      --module-bg: #e0f2fe;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -78,7 +78,7 @@
       margin: 0 0 6px 0;
       font-size: 28px;
       font-weight: 800;
-      background: linear-gradient(135deg, #10b981, #059669);
+      background: linear-gradient(135deg, #0284c7, #0369a1);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.5px;
@@ -133,6 +133,7 @@
     .nav-item:hover { background: #f1f5f9; transform: translateX(2px); }
 
     .nav-home { --card-accent: #3b82f6; }
+    .nav-einkauf { --card-accent: #10b981; }
     .nav-artikel { --card-accent: #3b82f6; }
     .nav-platz { --card-accent: #f59e0b; }
     .nav-bestand { --card-accent: #8b5cf6; }
@@ -219,7 +220,7 @@
       gap: 4px;
       background: var(--module-bg);
       padding: 10px 12px;
-      border: 1px solid #a7f3d0;
+      border: 1px solid #bae6fd;
       border-radius: var(--radius-sm);
       height: 42px;
     }
@@ -242,7 +243,7 @@
     input:focus, select:focus {
       border-color: var(--module-color);
       background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
     }
 
     button[type="submit"], .btn-pdf { 
@@ -260,13 +261,13 @@
       gap: 8px;
       background: var(--module-color);
       color: #ffffff;
-      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3);
       margin-top: 8px;
     }
     button[type="submit"]:hover, .btn-pdf:hover {
-      background: #059669;
+      background: #0369a1;
       transform: translateY(-1px);
-      box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 6px 8px -1px rgba(2, 132, 199, 0.4);
     }
     button:disabled { background: #94a3b8 !important; cursor: not-allowed !important; box-shadow: none !important; transform: none !important; }
 
@@ -364,6 +365,7 @@
       </summary>
       <nav class="nav-grid">
         <a href="index.html" class="nav-item nav-home"><span>🏠</span> Hauptmenü</a>
+        <a href="einkauf.html" class="nav-item nav-einkauf"><span>🛒</span> Ware einkaufen</a>
         <a href="artikel.html" class="nav-item nav-artikel"><span>🔍</span> Artikelabfrage</a>
         <a href="platz.html" class="nav-item nav-platz"><span>📍</span> Platzabfrage</a>
         <a href="bestandsabfrage.html" class="nav-item nav-bestand"><span>📝</span> Bestandsabfrage</a>
@@ -677,7 +679,7 @@
           ]
         ],
         theme: 'striped',
-        headStyles: { fillColor: [16, 185, 129] }
+        headStyles: { fillColor: [2, 132, 199] }
       });
 
       let finalY = doc.lastAutoTable.finalY + 10;
